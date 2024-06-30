@@ -1,0 +1,764 @@
+-- YOU CAN LOGGED IN AS manager => manager : employee => employee
+-- database
+DROP DATABASE IF EXISTS espssFINAL;
+CREATE DATABASE espssFINAL;
+
+USE espssFINAL;
+
+-- 1 usertype
+
+CREATE TABLE usertype (
+	usertypeID INT AUTO_INCREMENT NOT NULL,
+	type_desc VARCHAR(255) NOT NULL,
+
+	PRIMARY KEY(usertypeID)
+);
+
+-- 2 user
+
+CREATE TABLE user (
+	userID INT AUTO_INCREMENT NOT NULL,
+	fname VARCHAR(255) NOT NULL,
+	lname VARCHAR(255) NOT NULL,
+	username VARCHAR(255) NOT NULL UNIQUE,
+	password VARCHAR(255) NOT NULL,
+	last_active DATE NULL,
+	isArchived BOOLEAN NOT NULL DEFAULT FALSE,
+	usertypeID INT NOT NULL,
+
+	PRIMARY KEY(userID),
+
+	FOREIGN KEY(usertypeID)
+		REFERENCES usertype(usertypeID)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- 3 customer
+
+CREATE TABLE customer (
+	cusID INT AUTO_INCREMENT NOT NULL,
+	fname VARCHAR(255) NOT NULL,
+	lname VARCHAR(255) NOT NULL,
+	email VARCHAR(255) NULL UNIQUE,
+	contactnum VARCHAR(255) NULL UNIQUE,
+	userID INT NOT NULL,
+
+	PRIMARY KEY(cusID),
+	
+	FOREIGN KEY(userID)
+		REFERENCES user(userID)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- 4 supplier
+
+CREATE TABLE supplier (
+	supplierID INT AUTO_INCREMENT NOT NULL,
+	suppname VARCHAR(255) NOT NULL,
+
+	PRIMARY KEY(supplierID)
+);
+
+-- 5 item
+
+CREATE TABLE item (
+	itemID INT AUTO_INCREMENT NOT NULL,
+	`desc` VARCHAR(255) NOT NULL,
+	quantity INT NOT NULL DEFAULT 0,
+	wholesale_price DOUBLE NOT NULL,
+	retail_price DOUBLE NOT NULL,
+
+	PRIMARY KEY(itemID)
+);
+
+-- 6 order
+
+CREATE TABLE `order` (
+	orderID INT AUTO_INCREMENT NOT NULL,
+	orderdate DATE NOT NULL,
+	totalamount DOUBLE NULL,
+	cusID INT NOT NULL,
+
+	PRIMARY KEY(orderID),
+
+	FOREIGN KEY(cusID)
+		REFERENCES customer(cusID)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- 7 ordereditem
+
+CREATE TABLE ordereditem (
+	orderID INT NOT NULL,
+	itemID INT NOT NULL,
+	quantity INT NOT NULL,
+	orderprice DOUBLE NOT NULL,
+	subtotal_price DOUBLE NOT NULL,
+
+	PRIMARY KEY(orderID, itemID),
+
+	FOREIGN KEY(orderID)
+		REFERENCES `order`(orderID)
+		ON UPDATE RESTRICT ON DELETE CASCADE,
+
+	FOREIGN KEY(itemID)
+		REFERENCES item(itemID)
+		ON UPDATE CASCADE ON DELETE CASCADE
+);
+
+-- 8 event
+
+CREATE TABLE event (
+	eventID INT AUTO_INCREMENT NOT NULL,
+	`desc` VARCHAR(255) NOT NULL,
+
+	PRIMARY KEY(eventID)
+);
+
+-- 9 eventpackage
+
+CREATE TABLE eventpackage (
+	eventpackageID INT AUTO_INCREMENT NOT NULL,
+	packagedesc VARCHAR(255) NOT NULL,
+	price DOUBLE NOT NULL,
+	eventID INT NOT NULL,
+
+	PRIMARY KEY(eventpackageID),
+
+	FOREIGN KEY(eventID)
+		REFERENCES event(eventID)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- 10 includeditems
+
+CREATE TABLE includeditems (
+	eventpackageID INT NOT NULL,
+	itemID INT NOT NULL,
+	quantity INT NOT NULL,
+
+	PRIMARY KEY(eventpackageID, itemID),
+
+	FOREIGN KEY(eventpackageID)
+		REFERENCES eventpackage(eventpackageID)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	
+	FOREIGN KEY(itemID)
+		REFERENCES item(itemID)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- 11 eventschedule
+
+CREATE TABLE eventschedule (
+	eventdate DATE NOT NULL,
+	status BOOLEAN NOT NULL DEFAULT FALSE,
+	eventID INT NOT NULL,
+	cusID INT NOT NULL,
+	eventpackageID INT NOT NULL,
+	orderID INT NOT NULL,
+
+	PRIMARY KEY(eventdate),
+
+	FOREIGN KEY(eventID)
+		REFERENCES event(eventID)
+		ON UPDATE CASCADE ON DELETE RESTRICT,
+
+	FOREIGN KEY(cusID)
+		REFERENCES customer(cusID)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	
+	FOREIGN KEY(eventpackageID)
+		REFERENCES eventpackage(eventpackageID)
+		ON UPDATE CASCADE ON DELETE RESTRICT,
+	
+	FOREIGN KEY(orderID)
+		REFERENCES `order`(orderID)
+		ON UPDATE RESTRICT ON DELETE CASCADE
+);
+
+-- 12 additionalitems
+
+CREATE TABLE additionalitems (
+	eventdate DATE NOT NULL,
+	itemID INT NOT NULL,
+	quantity INT NOT NULL,
+	additional_price DOUBLE NOT NULL,
+	subtotal_price DOUBLE NOT NULL,
+
+	PRIMARY KEY(eventdate, itemID),
+
+	FOREIGN KEY(eventdate)
+		REFERENCES eventschedule(eventdate)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+
+	FOREIGN KEY(itemID)
+		REFERENCES item(itemID)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+
+-- 13 payment
+
+CREATE TABLE payment (
+	paymentID INT AUTO_INCREMENT NOT NULL,
+	paymentdate DATE NOT NULL,
+	paymentamount DOUBLE NOT NULL,
+	paymentchange DOUBLE NOT NULL,
+	orderID INT NOT NULL,
+
+	PRIMARY KEY(paymentID),
+
+	FOREIGN KEY(orderID)
+		REFERENCES `order`(orderID)
+		ON UPDATE RESTRICT ON DELETE RESTRICT
+);
+
+-- 14 stockin 
+
+CREATE TABLE stockin (
+	stockinID INT AUTO_INCREMENT NOT NULL,
+	stockindate DATE NOT NULL,
+	quantity INT NOT NULL,
+	itemID INT NOT NULL,
+	userID INT NOT NULL,
+	supplierID INT NOT NULL,
+
+	PRIMARY KEY(stockinID),
+
+	FOREIGN KEY(itemID)
+		REFERENCES item(itemID)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+
+	FOREIGN KEY(userID)
+		REFERENCES user(userID)
+		ON UPDATE CASCADE ON DELETE RESTRICT,
+	
+	FOREIGN KEY(supplierID)
+		REFERENCES supplier(supplierID)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- 15 cause
+
+CREATE TABLE cause (
+	causeID INT AUTO_INCREMENT NOT NULL,
+	causedesc VARCHAR(255) NOT NULL,
+
+	PRIMARY KEY(causeID)
+
+);
+
+-- 16 stockout
+
+CREATE TABLE stockout (
+	stockoutID INT AUTO_INCREMENT NOT NULL,
+	stockoutdate DATE NOT NULL,
+	quantity INT NOT NULL,
+	itemID INT NOT NULL,
+	orderID INT NULL,
+	causeID INT NOT NULL,
+	userID INT NOT NULL,
+
+	PRIMARY KEY(stockoutID),
+
+	FOREIGN KEY(itemID)
+		REFERENCES item(itemID)
+		ON UPDATE CASCADE ON DELETE CASCADE,
+	
+	FOREIGN KEY(orderID)
+		REFERENCES `order`(orderID)
+		ON UPDATE CASCADE ON DELETE SET NULL,
+
+	FOREIGN KEY(causeID)	
+		REFERENCES cause(causeID)
+		ON UPDATE CASCADE ON DELETE RESTRICT,
+
+	FOREIGN KEY(userID)
+		REFERENCES user(userID)
+		ON UPDATE CASCADE ON DELETE RESTRICT
+);
+
+-- viewcustomers
+CREATE VIEW viewCustomers AS
+	SELECT cusID AS "Customer ID", c.fname AS "First Name", c.lname AS "Last Name", email AS "Email", contactnum AS "Contact No.", CONCAT(u.fname," ",u.lname) AS "Accomodated by"
+	FROM customer c LEFT JOIN user u ON c.userID = u.userID;
+
+-- viewsuppliers
+CREATE VIEW viewsuppliers AS
+	SELECT supplierID AS "Supplier ID", suppname AS "Supplier Name" FROM supplier;
+
+-- viewusers
+CREATE VIEW viewusers AS
+	SELECT u.userID AS "User ID", fname AS "First Name", lname AS "Last Name", username AS "Username", password AS "Password", type_desc AS "User Type",
+	CASE
+		WHEN DATEDIFF(CURDATE(), last_active) = 0 THEN
+			"Recently active"
+		WHEN DATEDIFF(CURDATE(), last_active) =  1 THEN
+			"Last active yesterday"
+		ELSE
+			CONCAT("Last active on ", DATEDIFF(CURDATE(), last_active), " days")
+		END AS "Last Activity"
+	FROM user u INNER JOIN usertype t ON u.usertypeID = t.usertypeID WHERE u.isArchived = FALSE ORDER BY u.userID ASC;
+
+-- viewusertypes
+CREATE VIEW viewusertypes AS
+	SELECT usertypeID AS "Type ID", type_desc AS "Type Description" FROM usertype;
+
+-- viewuserarchive
+CREATE VIEW viewuserarchive AS
+	SELECT userID AS "User ID", fname AS "First Name", lname AS "Last Name", username AS "Username", type_desc AS "User Type",
+	CASE
+		WHEN DATEDIFF(CURDATE(), last_active) = 0 THEN
+			"Recently active"
+		WHEN DATEDIFF(CURDATE(), last_active) = 1 THEN
+			"Last active yesterday"
+		ELSE
+			CONCAT("Last active on", DATEDIFF(CURDATE(), last_active), " days")
+		END AS "Last Activity"
+	FROM user u INNER JOIN usertype t ON u.usertypeID = t.usertypeID WHERE u.isArchived = TRUE ORDER BY u.userID ASC;
+
+-- vieweventschedule
+CREATE VIEW viewEventSchedules AS
+	SELECT eventdate AS "Date", es.eventID AS "Event ID", `desc` AS "Event", packagedesc AS "Package", es.cusID AS "Customer ID", CONCAT(c.fname," ",c.lname) AS "Customer's Name", email AS "Email", contactnum AS "Contact No.", CONCAT(u.fname,"  ",u.lname) AS "Accomodated by", es.orderID AS "Order ID",totalamount AS "Contract Price", IF(status = TRUE, "Contract confirmed", "Not confirmed") AS "Status" 
+	FROM eventschedule es LEFT JOIN event e ON es.eventID = e.eventID INNER JOIN customer c ON es.cusID = c.cusID INNER JOIN user u ON c.userID = u.userID INNER JOIN eventpackage ep ON es.eventpackageID = ep.eventpackageID LEFT JOIN `order` o ON es.orderID = o.orderID;
+
+-- viewinventory
+CREATE VIEW viewInventory AS
+	SELECT itemID AS "Item ID", `desc` AS "Description", quantity AS "Stock", wholesale_price AS "Wholesale Price", retail_price AS "Retail Price" FROM item;
+
+-- vieworders
+CREATE VIEW viewOrders AS
+	SELECT o.orderID AS "Order ID", orderdate AS "Transaction Date", totalamount AS "Total Amount", o.cusID AS "Customer ID", CONCAT(fname," ", lname) AS "Customer's Name", p.paymentID AS "Payment ID", paymentdate AS "Date Paid", paymentamount AS "Amount Paid"
+	FROM `order` o LEFT JOIN payment p ON o.orderID = p.orderID INNER JOIN customer c ON o.cusID = c.cusID;
+
+-- viewordereditems
+CREATE VIEW viewOrderedItems AS
+	SELECT oi.orderID AS "Order ID", oi.itemID AS "Item ID", o.orderdate AS "Transaction Date", i.desc AS "Description", oi.quantity AS "Quantity", orderprice AS "Order Price", subtotal_price AS "Subtotal Price"
+	FROM ordereditem oi LEFT JOIN `order` o ON oi.orderID = o.orderID INNER JOIN item i ON oi.itemID = i.itemID;
+
+-- viewstockins
+CREATE VIEW viewStockIns AS
+	SELECT stockinID AS "StockIn ID", stockindate AS "StockIn Date", si.quantity AS "Quantity", si.itemID AS "Item ID", `desc` AS "Description", suppname AS "Supplier",CONCAT(fname," ",lname) AS "User" 
+	FROM stockin si LEFT JOIN user u ON si.userID = u.userID LEFT JOIN supplier su ON si.supplierID = su.supplierID INNER JOIN item i ON si.itemID = i.itemID ORDER BY stockindate DESC;
+
+-- viewstockouts
+CREATE VIEW viewStockOuts AS
+	SELECT stockoutID AS "StockOut ID", stockoutdate AS "StockOut Date", so.quantity AS "Quantity", so.itemID AS "Item ID", `desc` AS "Description", causedesc AS "Cause", CONCAT(u.fname," ",u.lname) AS "User"
+	FROM stockout so LEFT JOIN cause c ON so.causeID = c.causeID INNER JOIN item i ON so.itemID = i.itemID LEFT JOIN user u ON so.userID = u.userID WHERE orderID IS null ORDER BY stockoutdate DESC;
+
+-- viewcauses
+CREATE VIEW viewCauses AS
+	SELECT causeID AS "Cause ID", causedesc AS "Description" FROM cause;
+
+-- viewevents
+CREATE VIEW viewEvents AS
+	SELECT eventID AS "Event ID", `desc` AS "Event" FROM event;
+
+-- vieweventpackages
+CREATE VIEW viewEventPackages AS
+	SELECT e.eventID AS "Event ID", `desc` AS "Event", eventpackageID AS "Package ID", packagedesc AS "Description", price AS "Price"
+	FROM event e RIGHT JOIN eventpackage ep ON e.eventID = ep.eventID;
+
+-- viewIncludedItems
+CREATE VIEW viewIncludedItems AS
+	SELECT ii.eventPackageID AS "Package ID", ii.itemID AS "Item ID", `desc` AS "Description", ii.quantity AS "Quantity", retail_price AS "Price"
+	FROM includeditems ii INNER JOIN eventpackage ep ON ii.eventpackageID = ep.eventpackageID INNER JOIN item i ON ii.itemID = i.itemID;
+
+-- viewAdditionalItems
+CREATE VIEW viewAdditionalItems AS
+	SELECT ai.eventdate AS "Event Date", ai.itemID AS "Item ID", ai.quantity AS "Quantity", additional_price AS "Price", ai.subtotal_price AS "Subtotal", es.orderID AS "Order ID"
+	FROM additionalitems ai LEFT JOIN eventschedule es ON ai.eventdate = es.eventdate LEFT JOIN item i ON ai.itemID = i.itemID;
+
+-- procedures & transactions (not yet finalized)
+
+-- take_orderedItems
+DELIMITER $$
+CREATE PROCEDURE take_orderedItems (
+    IN order_id INT,
+    IN item_id INT,
+    IN _quantity INT,
+    IN _orderprice DOUBLE
+	)
+BEGIN
+    DECLARE subtotal_price DOUBLE;
+    DECLARE _stock INT;
+    START TRANSACTION;
+    SELECT quantity INTO _stock FROM item WHERE itemID = item_id;
+    IF _stock < _quantity THEN
+   		ROLLBACK;
+    ELSE
+		SET subtotal_price = _orderprice * _quantity;
+		INSERT INTO ordereditem (orderID, itemID, quantity, orderprice, subtotal_price) VALUES (order_id, item_id, _quantity, _orderprice, subtotal_price);
+    END IF;
+    COMMIT;
+END$$
+
+-- take_additionalItems
+DELIMITER $$
+CREATE PROCEDURE take_additionalItems (
+	IN event_date DATE,
+	IN item_id INT,
+	IN _quantity INT,
+	IN _additionalprice DOUBLE
+)
+BEGIN
+	DECLARE subtotal_price DOUBLE;
+    DECLARE _stock INT;
+    START TRANSACTION;
+    SELECT quantity INTO _stock FROM item WHERE itemID = item_id;
+    IF _stock < _quantity THEN
+   		ROLLBACK;
+    ELSE
+		SET subtotal_price = _additionalprice * _quantity;
+		INSERT INTO additionalitems (eventdate, itemID, quantity, additional_price, subtotal_price) VALUES (event_date, item_id, _quantity, _additionalprice, subtotal_price);
+    END IF;
+    COMMIT;
+END$$
+
+-- orderpayment_transaction
+DELIMITER $$
+CREATE PROCEDURE orderpayment_transaction (
+    IN payment_amount DOUBLE,
+    IN order_ID INT,
+    IN cause_ID INT,
+    IN total_amount DOUBLE,
+    IN user_ID INT
+)
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE order_quantity INT;
+    DECLARE item_ID INT;
+    DECLARE cus_change DOUBLE; 
+    DECLARE payment_ID INT;           
+    
+    DECLARE ordereditem_cursor CURSOR FOR
+        SELECT itemID, quantity FROM ordereditem WHERE orderID = order_ID;
+        
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    
+    START TRANSACTION;
+    
+    IF total_amount = 0 THEN
+        ROLLBACK;
+    END IF;
+        
+    IF payment_amount >= total_amount THEN
+        SET cus_change = payment_amount - total_amount;
+        INSERT INTO payment (paymentdate, paymentamount, paymentchange, orderID) VALUES (CURDATE(), payment_amount, cus_change, order_ID);
+    ELSE
+        ROLLBACK;
+    END IF;
+        
+    OPEN ordereditem_cursor;
+
+    read_ordereditem: LOOP
+        FETCH ordereditem_cursor INTO item_ID, order_quantity;
+        IF done THEN
+            LEAVE read_ordereditem;
+        END IF;
+            
+        INSERT INTO stockout (stockoutdate, quantity, itemID, orderID, causeID, userID) VALUES (CURDATE(), order_quantity, item_ID, order_ID, cause_ID, user_ID);
+    END LOOP;                    
+    CLOSE ordereditem_cursor;
+
+    COMMIT;
+END$$
+
+-- includedpayment_transaction
+DELIMITER $$
+CREATE PROCEDURE includedpayment_transaction (
+    IN payment_amount DOUBLE,
+    IN cause_ID INT,
+    IN total_amount DOUBLE,
+    IN eventPackage_ID INT,
+	IN event_date DATE,
+    IN user_ID INT
+)
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE order_quantity INT;
+    DECLARE item_ID INT;
+    DECLARE cus_change DOUBLE; 
+    DECLARE order_ID INT;           
+    
+    DECLARE includeditem_cursor CURSOR FOR
+        SELECT itemID, quantity FROM includeditems WHERE eventpackageID = eventPackage_ID;
+        
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    
+    START TRANSACTION;
+    
+    IF total_amount = 0 THEN
+        ROLLBACK;
+    END IF;
+        
+    IF payment_amount >= total_amount THEN
+		SELECT orderID INTO order_ID FROM eventschedule WHERE eventdate = event_date;
+        SET cus_change = payment_amount - total_amount;
+        INSERT INTO payment (paymentdate, paymentamount, paymentchange, orderID) VALUES (CURDATE(), payment_amount, cus_change, order_ID);
+
+		UPDATE eventschedule SET status = 1 WHERE eventdate = event_date;
+    ELSE
+        ROLLBACK;
+    END IF;
+
+    OPEN includeditem_cursor;
+    
+    read_includeditem: LOOP
+        FETCH includeditem_cursor INTO item_ID, order_quantity;
+        IF done THEN
+            LEAVE read_includeditem;
+        END IF;
+            
+        INSERT INTO stockout (stockoutdate, quantity, itemID, orderID, causeID, userID) VALUES (CURDATE(), order_quantity, item_ID, order_ID, cause_ID, user_ID);
+    END LOOP;
+    CLOSE includeditem_cursor;
+
+    COMMIT;
+END$$
+
+-- additionalpayment_transaction
+DELIMITER $$
+CREATE PROCEDURE additionalpayment_transaction (
+    IN payment_amount DOUBLE,
+    IN cause_ID INT,
+    IN total_amount DOUBLE,
+    IN event_date DATE,
+    IN user_ID INT
+)
+BEGIN
+    DECLARE done INT DEFAULT 0;
+    DECLARE order_quantity INT;
+    DECLARE item_ID INT;
+    DECLARE cus_change DOUBLE; 
+    DECLARE order_ID INT;           
+    
+    DECLARE additionalitem_cursor CURSOR FOR
+        SELECT itemID, quantity FROM additionalitems WHERE eventdate = event_date;
+        
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = 1;
+    
+    START TRANSACTION;
+    
+    IF total_amount = 0 THEN
+        ROLLBACK;
+    END IF;
+        
+    IF payment_amount >= total_amount THEN
+		SELECT orderID INTO order_ID FROM eventschedule WHERE eventdate = event_date;
+        SET cus_change = payment_amount - total_amount;
+        INSERT INTO payment (paymentdate, paymentamount, paymentchange, orderID) VALUES (CURDATE(), payment_amount, cus_change, order_ID);
+
+		UPDATE eventschedule SET status = 1 WHERE eventdate = event_date;
+    ELSE
+        ROLLBACK;
+    END IF;
+
+	
+    OPEN additionalitem_cursor;
+
+    read_additionalitem: LOOP
+        FETCH additionalitem_cursor INTO item_ID, order_quantity;
+        IF done THEN
+            LEAVE read_additionalitem;
+        END IF;
+
+        INSERT INTO stockout (stockoutdate, quantity, itemID, orderID, causeID, userID) VALUES (CURDATE(), order_quantity, item_ID, order_ID, cause_ID, user_ID);
+    END LOOP;
+    CLOSE additionalitem_cursor;
+        
+    COMMIT;
+END$$
+
+-- newcust_schedule_transaction
+DELIMITER $$
+CREATE PROCEDURE newcust_schedule_transaction (
+    IN _fname VARCHAR(255),
+    IN _lname VARCHAR(255),
+    IN _email VARCHAR(255),
+    IN _contactnum VARCHAR(255),
+    IN _userID INT,
+    IN _eventID INT,
+    IN _eventpackageID INT,
+    IN _date DATE,
+	IN _totalamount DOUBLE,
+    OUT order_ID INT
+)
+BEGIN
+	DECLARE _cusID INT;
+	DECLARE num_date INT;
+	START TRANSACTION;
+    	INSERT INTO customer (fname, lname, email, contactnum, userID) VALUES(_fname, _lname, _email, _contactnum, _userID);
+        SELECT COUNT(eventdate) INTO num_date FROM eventschedule WHERE eventdate = _date;
+        IF num_date > 0 THEN
+        	ROLLBACK;
+        ELSE
+			IF _totalamount = 0 THEN
+				ROLLBACK;
+			END IF;
+            SELECT cusID INTO _cusID FROM customer WHERE fname = _fname AND lname = _lname AND email = _email AND contactnum = _contactnum AND userID = _userID ORDER BY cusID DESC LIMIT 1;            
+			INSERT INTO `order` (orderdate, totalamount, cusID) VALUES (_date, _totalamount, _cusID);
+        	SELECT orderID INTO order_ID FROM `order` WHERE orderdate = _date AND totalamount = _totalamount AND cusID = _cusID ORDER BY orderID DESC LIMIT 1;
+			
+        	INSERT INTO eventschedule (eventID, cusID, eventdate, eventpackageID, orderID) VALUES (_eventID, _cusID, _date, _eventpackageID, order_ID);
+        END IF;
+    COMMIT;
+END$$
+
+-- regcust_schedule_transaction
+DELIMITER $$
+CREATE PROCEDURE regcust_schedule_transaction (
+    IN _cusID INT,
+    IN _eventID INT,
+    IN _eventpackageID INT,
+    IN _date DATE,
+	IN _totalamount DOUBLE,
+    OUT order_ID INT
+)
+BEGIN
+	DECLARE num_date INT;
+	START TRANSACTION;
+        SELECT COUNT(eventdate) INTO num_date FROM eventschedule WHERE eventdate = _date;
+        IF num_date > 0 THEN
+        	ROLLBACK;
+        ELSE        
+			IF _totalamount = 0 THEN
+				ROLLBACK;
+			END IF;
+			INSERT INTO `order` (orderdate, totalamount, cusID) VALUES (_date, _totalamount, _cusID);
+        	SELECT orderID INTO order_ID FROM `order` WHERE orderdate = _date AND totalamount = _totalamount AND cusID = _cusID ORDER BY orderID DESC LIMIT 1;
+
+        	INSERT INTO eventschedule (eventID, cusID, eventdate, eventpackageID, orderID) VALUES (_eventID, _cusID, _date, _eventpackageID, order_ID);
+        END IF;
+    COMMIT;
+END$$
+
+-- reschedule_transaction
+DELIMITER $$
+CREATE PROCEDURE reschedule_transaction (
+	IN event_ID INT,
+	IN cus_ID INT,
+	IN old_date DATE,
+	IN new_date DATE
+)
+BEGIN
+	DECLARE num_date INT;
+	START TRANSACTION;
+    	SELECT COUNT(eventdate) INTO num_date FROM eventschedule WHERE eventdate = new_date;
+        IF num_date > 0 THEN
+        	ROLLBACK;
+        ELSE
+        	UPDATE eventschedule SET eventdate = new_date WHERE eventID = event_ID AND cusID = cus_ID AND eventdate = old_date;
+        END IF;
+    COMMIT;
+END$$
+
+-- newcust_order_transaction
+DELIMITER $$
+CREATE PROCEDURE newcust_order_transaction (
+    IN _fname VARCHAR(255),
+    IN _lname VARCHAR(255),
+    IN _email VARCHAR(255),
+    IN _contactnum VARCHAR(255),
+    IN _userID INT,
+    IN _orderdate DATE,
+    IN _totalamount DOUBLE,
+    OUT order_ID INT
+)
+BEGIN
+	DECLARE _cusID INT;
+	START TRANSACTION;
+		IF _totalamount = 0 THEN
+			ROLLBACK;
+		END IF;
+    	INSERT INTO customer (fname, lname, email, contactnum, userID) VALUES(_fname, _lname, _email, _contactnum, _userID);
+        SELECT cusID INTO _cusID FROM customer WHERE fname = _fname AND lname = _lname AND email = _email AND contactnum = _contactnum AND userID = _userID ORDER BY cusID DESC LIMIT 1;
+        INSERT INTO `order` (orderdate, totalamount, cusID) VALUES (_orderdate, _totalamount, _cusID);
+        SELECT orderID INTO order_ID FROM `order` WHERE orderdate = _orderdate AND totalamount = _totalamount AND cusID = _cusID ORDER BY orderID DESC LIMIT 1;
+    COMMIT;
+END$$
+
+-- regcust_order_transaction
+DELIMITER $$
+CREATE PROCEDURE regcust_order_transaction (
+    IN _cusID INT,
+    IN _orderdate DATE,
+    IN _totalamount DOUBLE,
+    OUT order_ID INT
+)
+BEGIN
+	START TRANSACTION;
+		IF _totalamount = 0 THEN
+			ROLLBACK;
+		END IF;
+        INSERT INTO `order` (orderdate, totalamount, cusID) VALUES (_orderdate, _totalamount, _cusID);
+        SELECT orderID INTO order_ID FROM `order` WHERE orderdate = _orderdate AND totalamount = _totalamount AND cusID = _cusID ORDER BY orderID DESC LIMIT 1;
+    COMMIT;
+END$$
+
+-- cancel_order_transaction
+DELIMITER $$
+CREATE PROCEDURE cancel_order_transaction (
+	IN _orderID INT
+)
+BEGIN
+	START TRANSACTION;
+    DELETE FROM `order` WHERE orderID = _orderID;
+		ALTER TABLE `order` AUTO_INCREMENT = 1;
+    COMMIT;
+END$$
+
+DELIMITER $$
+CREATE PROCEDURE undo_add_stock (
+    IN stockin_date DATE,
+    IN _quantity INT,
+    IN _itemID INT,
+    IN _userID INT
+)
+BEGIN
+    DECLARE stockin_ID INT;
+	START TRANSACTION;
+    	SELECT stockinID INTO stockin_ID FROM stockin WHERE stockindate = stockin_date AND quantity = _quantity AND itemID = _itemID AND userID = _userID ORDER BY stockinID DESC LIMIT 1;
+    	DELETE FROM stockin WHERE stockinID = stockin_ID;
+		ALTER TABLE stockin AUTO_INCREMENT = 1;
+    COMMIT;
+END$$
+
+DELIMITER ;
+-- triggers
+-- stockout_into_inventory
+CREATE TRIGGER `stockout_into_inventory` AFTER INSERT ON `stockout`
+ FOR EACH ROW UPDATE item SET quantity = quantity - new.quantity WHERE itemID = new.itemID;
+
+-- stockin_into_inventory
+CREATE TRIGGER `stockin_into_inventory` AFTER INSERT ON `stockin`
+ FOR EACH ROW UPDATE item SET quantity = quantity + new.quantity WHERE itemID = new.itemID;
+
+-- undo_stockin_into_inventory
+CREATE TRIGGER `undo_stockin_into_inventory` AFTER DELETE ON `stockin`
+ FOR EACH ROW UPDATE item SET quantity = quantity - old.quantity WHERE itemID = old.itemID;
+
+-- default users
+INSERT INTO `usertype`(`type_desc`) VALUES ('Manager');
+INSERT INTO `usertype`(`type_desc`) VALUES ('Employee');
+
+INSERT INTO `user`(`fname`, `lname`, `username`, `password`, `usertypeID`) VALUES ('temp','mngr','m','m', 1);
+INSERT INTO `user`(`fname`, `lname`, `username`, `password`, `usertypeID`) VALUES ('temp','emp','e','e', 2);
+
+INSERT INTO `event`(`desc`) VALUES ('Birdthday');
+INSERT INTO `event`(`desc`) VALUES ('Wedding');
+
+INSERT INTO `eventpackage`(`packagedesc`, `price`, `eventID`) VALUES ('Birthdaypackage1',100,1);
+INSERT INTO `eventpackage`(`packagedesc`, `price`, `eventID`) VALUES ('Weddingpackage1',100,2);
+
+INSERT INTO `supplier`(`suppname`) VALUES ('doe john');
+
+INSERT INTO `item`(`desc`, `wholesale_price`, `retail_price`) VALUES ('balloon',10,15);
+
+INSERT INTO stockin (stockindate, quantity, itemID, userID, supplierID) VALUES (CURDATE(),100,1,1,1);
+
+INSERT INTO cause (causedesc) VALUES ('Sold');
+INSERT INTO cause (causedesc) VALUES ('Expired');
+INSERT INTO cause (causedesc) VALUES ('Damaged');
+
